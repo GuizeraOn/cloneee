@@ -42,15 +42,34 @@ export function resolveFunnelStage(
   isFunnel: boolean,
   productName: string
 ): string {
+  // Prioridade 1: campo nativo da API
   if (isOrderBump) return 'ORDER_BUMP';
-  
-  if (isFunnel) {
-    const name = productName.toLowerCase();
-    if (name.includes('upsell') || name.includes('up sell')) return 'UPSELL';
-    if (name.includes('downsell') || name.includes('down sell')) return 'DOWNSELL';
-    return 'UPSELL'; // Dentro do funil sem nome específico → assume upsell
-  }
-  
+
+  const name = productName.toLowerCase();
+
+  // Prioridade 2 (planilha): "upsell 02", "upsell 2" ou "mentoria" → Upsell 02
+  if (
+    name.includes('upsell 02') ||
+    name.includes('upsell 2')  ||
+    name.includes('upsell2')   ||
+    name.includes('mentoria')
+  ) return 'UPSELL_02';
+
+  // Prioridade 3 (planilha): "upsell 01", "upsell 1" ou "acelerador" → Upsell 01
+  if (
+    name.includes('upsell 01') ||
+    name.includes('upsell 1')  ||
+    name.includes('upsell1')   ||
+    name.includes('acelerador')
+  ) return 'UPSELL_01';
+
+  // Se is_funnel=true mas sem identificador específico → assume Upsell 01
+  if (isFunnel) return 'UPSELL_01';
+
+  // Downsell genérico
+  if (name.includes('downsell') || name.includes('down sell')) return 'DOWNSELL';
+
+  // Padrão: produto principal (Front-End)
   return 'FRONTEND';
 }
 

@@ -69,3 +69,15 @@ export function useSalesList(page: number, limit: number) {
     }
   });
 }
+
+export function useGeoMetrics() {
+  const filterString = useFilterParams();
+  return useQuery({
+    queryKey: ['geoMetrics', filterString],
+    queryFn: async () => {
+      const res = await fetch(`/api/metrics/geo?${filterString}`);
+      if (!res.ok) throw new Error('Failed to fetch geo metrics');
+      return res.json();
+    }
+  });
+}

@@ -30,10 +30,16 @@ model Sale {
   exchangeRate    Float    @map("exchange_rate")
   grossBrl        Float    @map("gross_brl")
   netBrl          Float    @map("net_brl")
+  buyerEmail      String?  @map("buyer_email")
+  buyerName       String?  @map("buyer_name")
+  country         String?
+  utmSource       String?  @map("utm_source")
   rawPayload      Json     @map("raw_payload")
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@index([purchasedAt])
   @@index([status])
+  @@index([buyerEmail])
+  @@index([country])
   @@map("sales")
 }

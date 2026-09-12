@@ -80,6 +80,12 @@ export async function POST(req: NextRequest) {
       ? new Date(Number(purchase.approved_date))
       : new Date(Number(payload?.creation_date ?? Date.now()));
 
+    // Dados do comprador e origem
+    const buyerEmail = payload?.data?.buyer?.email ?? null;
+    const buyerName  = payload?.data?.buyer?.name ?? null;
+    const country    = purchase?.checkout_country?.name ?? payload?.data?.buyer?.address?.country ?? null;
+    const utmSource  = purchase?.origin?.src ?? purchase?.origin?.sck ?? null;
+
     // Inserir com deduplicação nativa (UNIQUE constraint em transactionId)
     try {
       await prisma.sale.create({
@@ -95,6 +101,10 @@ export async function POST(req: NextRequest) {
           exchangeRate,
           grossBrl,
           netBrl,
+          buyerEmail,
+          buyerName,
+          country,
+          utmSource,
           rawPayload: payload,
         }
       });

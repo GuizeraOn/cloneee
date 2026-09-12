@@ -2,6 +2,7 @@ import { DateFilter } from '@/components/dashboard/DateFilter';
 import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { FunnelChart } from '@/components/dashboard/FunnelChart';
 import { PaymentMethodsChart } from '@/components/dashboard/PaymentMethodsChart';
+import { GeoChart } from '@/components/dashboard/GeoChart';
 import { CardHealth } from '@/components/dashboard/CardHealth';
 import { SalesTable } from '@/components/dashboard/SalesTable';
 
@@ -26,9 +27,10 @@ export default function DashboardPage() {
         <CardHealth />
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <FunnelChart />
           <PaymentMethodsChart />
+          <GeoChart />
         </div>
 
         {/* Table */}
