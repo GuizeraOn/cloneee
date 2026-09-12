@@ -6,7 +6,7 @@
  */
 export function normalizeStatus(status: string): string {
   const s = status.toUpperCase();
-  if (['APPROVED', 'COMPLETE'].includes(s)) return 'APPROVED';
+  if (['APPROVED', 'COMPLETE', 'COMPLETED'].includes(s)) return 'APPROVED';
   if (['CANCELLED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'CHARGEBACK', 'BLOCKED', 'DISPUTE', 'PROTESTED'].includes(s)) return 'REFUNDED';
   if (['PRINTED_BILLET', 'WAITING_PAYMENT', 'PROCESSING_TRANSACTION', 'STARTED', 'PRE_ORDER', 'UNDER_ANALISYS'].includes(s)) return 'PENDING';
   if (['OVERDUE', 'EXPIRED', 'NO_FUNDS'].includes(s)) return 'EXPIRED';
