@@ -20,11 +20,11 @@ export function FunnelChart() {
             <XAxis type="number" hide />
             <YAxis dataKey="stage" type="category" width={100} tick={{ fontSize: 12 }} />
             <Tooltip 
-              formatter={(value: any, name: string | undefined) => {
+              formatter={((value: any, name: any) => {
                 const label = name === 'count' ? 'Buyers' : 'Revenue';
                 const formatted = name === 'count' ? value : `R$ ${Number(value).toFixed(2)}`;
                 return [formatted, label];
-              }}
+              }) as any}
             />
             <Bar dataKey="count" fill="#4f46e5" radius={[0, 4, 4, 0]} barSize={32} />
           </BarChart>

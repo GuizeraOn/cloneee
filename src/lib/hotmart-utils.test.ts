@@ -1,23 +1,32 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeStatus, normalizePaymentMethod, normalizeFunnelStage } from './hotmart-utils';
+import { normalizeStatus, normalizePaymentMethod, resolveFunnelStage } from './hotmart-utils';
 
 test('normalizeStatus', () => {
   assert.equal(normalizeStatus('APPROVED'), 'APPROVED');
   assert.equal(normalizeStatus('COMPLETE'), 'APPROVED');
-  assert.equal(normalizeStatus('CANCELED'), 'REFUNDED');
-  assert.equal(normalizeStatus('BILLET_PRINTED'), 'PENDING');
-  assert.equal(normalizeStatus('UNKNOWN'), 'UNKNOWN');
+  assert.equal(normalizeStatus('CANCELLED'), 'REFUNDED');
+  assert.equal(normalizeStatus('CHARGEBACK'), 'REFUNDED');
+  assert.equal(normalizeStatus('PRINTED_BILLET'), 'PENDING');
+  assert.equal(normalizeStatus('WAITING_PAYMENT'), 'PENDING');
+  assert.equal(normalizeStatus('OVERDUE'), 'EXPIRED');
 });
 
 test('normalizePaymentMethod', () => {
   assert.equal(normalizePaymentMethod('CREDIT_CARD'), 'CREDIT_CARD');
-  assert.equal(normalizePaymentMethod('HOTMART_PIX'), 'PIX');
+  assert.equal(normalizePaymentMethod('PIX'), 'PIX');
   assert.equal(normalizePaymentMethod('BILLET'), 'BOLETO');
+  assert.equal(normalizePaymentMethod('FINANCED_BILLET'), 'BOLETO');
 });
 
-test('normalizeFunnelStage', () => {
-  assert.equal(normalizeFunnelStage('Course - Upsell 1'), 'UPSELL');
-  assert.equal(normalizeFunnelStage('Main Product (Order Bump)'), 'ORDER_BUMP');
-  assert.equal(normalizeFunnelStage('Just the product'), 'FRONTEND');
+test('resolveFunnelStage - order bump nativo', () => {
+  assert.equal(resolveFunnelStage(true, false, 'Course'), 'ORDER_BUMP');
+});
+
+test('resolveFunnelStage - upsell', () => {
+  assert.equal(resolveFunnelStage(false, true, 'Course Upsell'), 'UPSELL');
+});
+
+test('resolveFunnelStage - frontend', () => {
+  assert.equal(resolveFunnelStage(false, false, 'Just the product'), 'FRONTEND');
 });
