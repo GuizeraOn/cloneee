@@ -32,7 +32,7 @@ export function PaymentMethodsChart() {
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(val: number) => `R$ ${val.toFixed(2)}`} />
+            <Tooltip formatter={(val: any) => typeof val === 'number' ? `R$ ${val.toFixed(2)}` : val} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
