@@ -5,14 +5,14 @@ import { resolveFunnelStage, normalizePaymentMethod, normalizeStatus, extractPro
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Verificar Hottok — header correto conforme documentação 2.0: X-HOTMART-HOTTOK
-    const hottok = req.headers.get('x-hotmart-hottok');
-    const EXPECTED_HOTTOK = process.env.HOTMART_HOTTOK;
-
-    if (EXPECTED_HOTTOK && hottok !== EXPECTED_HOTTOK) {
-      console.warn('Webhook rejected: invalid hottok');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Nota: O HOTTOK foi removido da interface da Hotmart em contas mais recentes.
+    // Caso sua conta tenha, defina HOTMART_HOTTOK no .env e descomente o bloco abaixo.
+    //
+    // const hottok = req.headers.get('x-hotmart-hottok');
+    // const EXPECTED_HOTTOK = process.env.HOTMART_HOTTOK;
+    // if (EXPECTED_HOTTOK && hottok !== EXPECTED_HOTTOK) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
 
     const payload = await req.json();
 
