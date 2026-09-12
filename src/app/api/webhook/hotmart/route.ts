@@ -1,52 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { fetchLatestUsdBrlRate } from '@/lib/exchange-rate';
-import { normalizeFunnelStage, normalizePaymentMethod, normalizeStatus, extractUtm } from '@/lib/hotmart-utils';
+import { resolveFunnelStage, normalizePaymentMethod, normalizeStatus, extractProducerCommission } from '@/lib/hotmart-utils';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Verify Hottok
-    const hottok = req.headers.get('x-token'); // Assuming sent in headers, or it could be in payload.hottok
+    // 1. Verificar Hottok — header correto conforme documentação 2.0: X-HOTMART-HOTTOK
+    const hottok = req.headers.get('x-hotmart-hottok');
     const EXPECTED_HOTTOK = process.env.HOTMART_HOTTOK;
-    
-    // In production we should strictly enforce this. For local testing without env var, we'll allow it if env var is not set.
+
     if (EXPECTED_HOTTOK && hottok !== EXPECTED_HOTTOK) {
+      console.warn('Webhook rejected: invalid hottok');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const payload = await req.json();
 
-    // 2. Validate basic structure
-    const transactionId = payload?.data?.transaction ?? payload?.transaction;
+    // 2. Validar estrutura — conforme documentação 2.0
+    // Campos raiz: id, creation_date, event, version, data
+    const purchase = payload?.data?.purchase;
+    const transactionId = purchase?.transaction;
+
     if (!transactionId) {
+      console.warn('Webhook rejected: missing purchase.transaction');
       return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 });
     }
 
-    // 3. Extract and normalize fields
-    // Assuming Hotmart Webhook 2.0 structure
+    // 3. Extrair campos conforme documentação oficial
     const productName = payload?.data?.product?.name ?? 'Unknown Product';
-    const rawStatus = payload?.data?.status ?? payload?.status ?? 'UNKNOWN';
-    const status = normalizeStatus(rawStatus);
-    const paymentMethod = normalizePaymentMethod(payload?.data?.payment?.type ?? 'UNKNOWN');
-    const funnelStage = normalizeFunnelStage(productName);
-    
-    // Calculate values
-    const grossUsd = payload?.data?.commissions?.[0]?.value ?? payload?.price ?? 0;
-    const netUsd = payload?.data?.commissions?.[0]?.source === 'HOTMART' ? (grossUsd * 0.9) : grossUsd; // Simplified example
-    
-    // 4. Fetch exchange rate
-    const exchangeRate = await fetchLatestUsdBrlRate();
-    const grossBrl = grossUsd * exchangeRate;
-    const netBrl = netUsd * exchangeRate;
+    const rawStatus   = purchase?.status ?? 'UNKNOWN';
+    const status      = normalizeStatus(rawStatus);
+    const paymentType = purchase?.payment?.type ?? 'UNKNOWN';
+    const paymentMethod = normalizePaymentMethod(paymentType);
 
-    // 5. Store in database with Deduplication (ON CONFLICT DO NOTHING)
-    // Prisma uses `upsert` for on conflict do update, but for DO NOTHING, we can try to create and catch unique constraint error, 
-    // or use createMany with skipDuplicates. Since we only have one, we can try/catch.
+    // Funnel Stage — usando campos nativos da API:
+    // purchase.order_bump.is_order_bump → ORDER_BUMP
+    // purchase.is_funnel → dentro do funil (Upsell/Downsell por nome)
+    const isOrderBump = purchase?.order_bump?.is_order_bump === true;
+    const isFunnel    = purchase?.is_funnel === true;
+    const funnelStage = resolveFunnelStage(isOrderBump, isFunnel, productName);
+
+    // 4. Calcular valores financeiros
+    // Gross = purchase.full_price (o que o comprador pagou)
+    // Net   = comissão do PRODUCER (o que nós recebemos)
+    const fullPrice = purchase?.full_price;
+    const grossUsd  = fullPrice?.currency_value === 'USD' ? (fullPrice?.value ?? 0) : 0;
+
+    // Comissões — campo correto: data.commissions[]
+    const commissions = payload?.data?.commissions ?? [];
+    const { valueUsd: netUsd, valueBrl: netBrlFromHotmart, conversionRate: hotmartRate } = extractProducerCommission(commissions);
+
+    // Cotação: preferir a taxa que a Hotmart já nos enviou na currency_conversion,
+    // senão buscamos via AwesomeAPI (nosso cron de fallback)
+    const exchangeRate = hotmartRate > 0 ? hotmartRate : await fetchLatestUsdBrlRate();
+    const grossBrl     = grossUsd * exchangeRate;
+    const netBrl       = netBrlFromHotmart > 0 ? netBrlFromHotmart : netUsd * exchangeRate;
+
+    // Data de aprovação (purchase.approved_date em milissegundos)
+    const purchasedAt = purchase?.approved_date
+      ? new Date(purchase.approved_date)
+      : new Date(payload?.creation_date ?? Date.now());
+
+    // 5. Inserir no banco com deduplicação nativa pelo transactionId (UNIQUE)
     try {
       await prisma.sale.create({
         data: {
           transactionId: String(transactionId),
-          purchasedAt: new Date(payload?.creation_date ?? Date.now()),
+          purchasedAt,
           productName,
           funnelStage,
           paymentMethod,
@@ -60,18 +80,19 @@ export async function POST(req: NextRequest) {
         }
       });
     } catch (dbError: any) {
-      // Prisma error code for unique constraint violation is P2002
+      // P2002 = Unique constraint violation → transação já processada (deduplicação)
       if (dbError.code === 'P2002') {
-        console.log(`Transaction ${transactionId} already exists. Deduplicated.`);
-        // Return 200 to Hotmart so it stops retrying
-        return NextResponse.json({ success: true, message: 'Deduplicated' }, { status: 200 });
+        console.log(`[Webhook] Deduplicado: transaction ${transactionId} já existe.`);
+        return NextResponse.json({ success: true, deduplicated: true }, { status: 200 });
       }
-      throw dbError; // rethrow if it's another error
+      throw dbError;
     }
 
+    console.log(`[Webhook] Venda processada: ${transactionId} | ${status} | R$ ${netBrl.toFixed(2)}`);
     return NextResponse.json({ success: true }, { status: 200 });
+
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    console.error('[Webhook] Erro inesperado:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
