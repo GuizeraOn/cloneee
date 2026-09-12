@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model ExchangeRate {
+  id         Int      @id @default(autoincrement())
+  rate       Float
+  fetchedAt  DateTime @default(now()) @map("fetched_at")
+  source     String   @default("awesomeapi")
+
+  @@map("exchange_rates")
+}
+
+model Sale {
+  id              String   @id @default(uuid())
+  transactionId   String   @unique @map("transaction_id")
+  purchasedAt     DateTime @map("purchased_at")
+  productName     String   @map("product_name")
+  funnelStage     String   @map("funnel_stage")
+  paymentMethod   String   @map("payment_method")
+  status          String
+  grossUsd        Float    @map("gross_usd")
+  netUsd          Float    @map("net_usd")
+  exchangeRate    Float    @map("exchange_rate")
+  grossBrl        Float    @map("gross_brl")
+  netBrl          Float    @map("net_brl")
+  rawPayload      Json     @map("raw_payload")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([purchasedAt])
+  @@index([status])
+  @@map("sales")
+}
