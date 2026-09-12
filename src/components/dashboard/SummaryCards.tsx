@@ -15,13 +15,13 @@ export function SummaryCards() {
   const { data, isLoading, error } = useSummaryMetrics();
 
   if (isLoading) return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-pulse">
-      {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-gray-200 rounded-xl" />)}
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-pulse">
+      {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-bg-card rounded-xl border border-border-subtle" />)}
     </div>
   );
 
   if (error || !data) return (
-    <div className="p-4 text-red-500 bg-red-50 rounded-xl">Erro ao carregar métricas</div>
+    <div className="p-4 text-danger bg-danger-bg rounded-xl border border-danger">Erro ao carregar métricas</div>
   );
 
   const {
@@ -43,65 +43,62 @@ export function SummaryCards() {
       value: formatCurrency(netRevenueBrl),
       subtitle: `Bruto: ${formatCurrency(grossRevenueBrl)}`,
       icon: DollarSign,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
+      color: 'text-success', // Main accent
     },
     {
       title: 'Compradores Únicos',
       value: String(uniqueBuyers),
       subtitle: `${totalApproved} vendas aprovadas`,
       icon: Users,
-      color: 'text-purple-600',
-      bg: 'bg-purple-50',
+      color: 'text-info',
     },
     {
       title: 'Ticket Médio (AOV)',
       value: formatCurrency(aovBrl),
       subtitle: `Take Rate: ${formatPct(takeRate)}`,
       icon: TrendingUp,
-      color: 'text-orange-600',
-      bg: 'bg-orange-50',
+      color: 'text-chart-3',
     },
     {
       title: 'Receita Adicional Funil',
       value: formatCurrency(additionalRevenueBrl),
       subtitle: `${formatPct(additionalRevenueShare)} do faturamento`,
       icon: ShoppingCart,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
+      color: 'text-chart-4',
     },
     {
       title: 'Taxa de Aprovação',
       value: formatPct(approvalRate),
       subtitle: `${totalApproved} de ${totalEvents} eventos`,
       icon: CheckCircle2,
-      color: 'text-teal-600',
-      bg: 'bg-teal-50',
+      color: 'text-chart-2',
     },
     {
       title: 'Faturamento Bruto',
       value: formatCurrency(grossRevenueBrl),
       subtitle: `Líquido: ${formatPct(takeRate)} do bruto`,
       icon: Activity,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
+      color: 'text-chart-5',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (
-          <div key={i} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight">{c.title}</h3>
-              <div className={`p-1.5 rounded-lg ${c.bg} ${c.color}`}>
-                <Icon className="w-4 h-4" />
-              </div>
+          <div 
+            key={i} 
+            className="group bg-bg-card p-6 rounded-xl border border-border-subtle shadow-card hover:shadow-hover hover:bg-bg-card-hover transition-all duration-200 flex flex-col justify-between gap-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-regular text-text-secondary">{c.title}</h3>
+              <Icon className={`w-5 h-5 ${c.color} opacity-80 group-hover:opacity-100 transition-opacity`} />
             </div>
-            <p className="text-xl font-bold text-gray-900">{c.value}</p>
-            <p className="text-xs text-gray-400 mt-1">{c.subtitle}</p>
+            <div>
+              <p className="text-2xl font-bold text-text-primary leading-none mb-2">{c.value}</p>
+              <p className="text-xs text-text-tertiary">{c.subtitle}</p>
+            </div>
           </div>
         );
       })}

@@ -10,32 +10,49 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get('endDate') || undefined;
 
     const dateFilter = resolveDateRange({ preset, startDate, endDate });
+    const dateWhere = Object.keys(dateFilter).length > 0 ? { purchasedAt: dateFilter } : {};
 
+    // Métricas do Cartão
     const grouped = await prisma.sale.groupBy({
       by: ['status'],
       where: {
         paymentMethod: 'CREDIT_CARD',
-        ...(Object.keys(dateFilter).length > 0 && { purchasedAt: dateFilter }),
+        ...dateWhere,
       },
-      _count: {
-        id: true,
-      }
+      _count: { id: true },
+      _sum: { netBrl: true, grossBrl: true }
     });
 
-    const counts = grouped.reduce((acc, curr) => {
-      acc[curr.status] = curr._count.id;
-      return acc;
-    }, {} as Record<string, number>);
+    // Receita Total Global (para calcular a %)
+    const globalAgg = await prisma.sale.aggregate({
+      where: { status: 'APPROVED', ...dateWhere },
+      _sum: { netBrl: true }
+    });
+    const globalNet = globalAgg._sum.netBrl ?? 0;
 
-    const approved = counts['APPROVED'] || 0;
-    const declined = (counts['REFUNDED'] || 0) + (counts['DECLINED'] || 0) + (counts['CHARGEBACK'] || 0);
+    let approved = 0;
+    let declined = 0;
+    let netBrl = 0;
+    let grossBrl = 0;
+
+    for (const row of grouped) {
+      if (row.status === 'APPROVED') {
+        approved += row._count.id;
+        netBrl += row._sum.netBrl ?? 0;
+        grossBrl += row._sum.grossBrl ?? 0;
+      } else if (['REFUNDED', 'CANCELED', 'CHARGEBACK', 'DECLINED'].includes(row.status)) {
+        declined += row._count.id;
+      }
+    }
+
     const total = approved + declined;
-
     const approvalRate = total > 0 ? (approved / total) * 100 : 0;
+    const aov = approved > 0 ? netBrl / approved : 0;
+    const share = globalNet > 0 ? (netBrl / globalNet) * 100 : 0;
     
     let diagnostic = 'GOOD';
-    if (approvalRate < 70) diagnostic = 'WARNING';
-    if (approvalRate < 50) diagnostic = 'CRITICAL';
+    if (approvalRate > 0 && approvalRate < 75) diagnostic = 'WARNING';
+    if (approvalRate > 0 && approvalRate < 60) diagnostic = 'CRITICAL';
     if (total === 0) diagnostic = 'NO_DATA';
 
     return NextResponse.json({
@@ -44,6 +61,10 @@ export async function GET(req: NextRequest) {
         declined,
         total,
         approvalRate,
+        netBrl,
+        grossBrl,
+        aov,
+        share,
         diagnostic
       }
     });

@@ -3,12 +3,13 @@
 import { useFunnelMetrics } from '@/hooks/useMetrics';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+// Usando as cores semânticas de dados do DarkMetrics (1 a 5)
 const STAGE_COLORS: Record<string, string> = {
-  FRONTEND:   '#4f46e5',
-  ORDER_BUMP: '#10b981',
-  UPSELL_01:  '#f59e0b',
-  UPSELL_02:  '#ef4444',
-  DOWNSELL:   '#8b5cf6',
+  FRONTEND:   'var(--chart-1)',
+  ORDER_BUMP: 'var(--chart-2)',
+  UPSELL_01:  'var(--chart-3)',
+  UPSELL_02:  'var(--chart-4)',
+  DOWNSELL:   'var(--chart-5)',
 };
 
 const formatCurrency = (val: number) =>
@@ -17,60 +18,72 @@ const formatCurrency = (val: number) =>
 export function FunnelChart() {
   const { data, isLoading } = useFunnelMetrics();
 
-  if (isLoading) return <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />;
+  if (isLoading) return <div className="h-80 bg-bg-card rounded-xl border border-border-subtle animate-pulse" />;
 
   const funnel: any[] = data?.funnel ?? [];
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">Funil de Conversão</h3>
-      <p className="text-xs text-gray-400 mb-4">Vendas aprovadas por etapa</p>
+    <div className="bg-bg-card p-6 rounded-xl border border-border-subtle shadow-card hover:shadow-hover transition-all duration-200">
+      <div className="mb-4 pb-4 border-b border-border-subtle">
+        <h3 className="text-lg font-semibold text-text-primary">Funil de Conversão</h3>
+        <p className="text-sm text-text-secondary mt-1">Vendas aprovadas por etapa</p>
+      </div>
 
       {/* Gráfico de barras */}
-      <div className="h-48 mb-4">
+      <div className="h-56 mb-6">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={funnel} layout="vertical" margin={{ top: 0, right: 16, left: 10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+          <BarChart data={funnel} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-subtle)" />
             <XAxis type="number" hide />
-            <YAxis dataKey="label" type="category" width={80} tick={{ fontSize: 11 }} />
+            <YAxis 
+              dataKey="label" 
+              type="category" 
+              width={90} 
+              tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} 
+              axisLine={{ stroke: 'var(--border-subtle)' }}
+              tickLine={false}
+            />
             <Tooltip
+              cursor={{ fill: 'var(--bg-card-hover)' }}
+              contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-default)', color: 'var(--text-primary)', borderRadius: '8px' }}
+              itemStyle={{ color: 'var(--text-primary)' }}
               formatter={((value: any, name: any) => [
                 name === 'netBrl' ? formatCurrency(Number(value)) : value,
                 name === 'netBrl' ? 'Líquido R$' : 'Aprovados',
               ]) as any}
             />
-            <Bar dataKey="approvedCount" radius={[0, 4, 4, 0]} barSize={20}>
+            <Bar dataKey="approvedCount" radius={[0, 4, 4, 0]} barSize={24}>
               {funnel.map((entry: any) => (
-                <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] ?? '#6b7280'} />
+                <Cell key={entry.stage} fill={STAGE_COLORS[entry.stage] ?? 'var(--chart-6)'} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Tabela de Take Rates */}
-      <div className="border-t border-gray-100 pt-3 space-y-2">
+      {/* Tabela de Take Rates (Legenda detalhada) */}
+      <div className="space-y-3">
         {funnel.map((row: any) => (
-          <div key={row.stage} className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
+          <div key={row.stage} className="flex items-center justify-between text-sm py-2 border-b border-border-subtle last:border-0 last:pb-0">
+            <div className="flex items-center gap-3">
               <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: STAGE_COLORS[row.stage] ?? '#6b7280' }}
+                className="w-3 h-3 rounded-full shadow-glow"
+                style={{ backgroundColor: STAGE_COLORS[row.stage] ?? 'var(--chart-6)' }}
               />
-              <span className="text-gray-700 font-medium">{row.label}</span>
+              <span className="text-text-primary font-medium">{row.label}</span>
             </div>
-            <div className="flex items-center gap-4 text-right">
-              <span className="text-gray-500 text-xs">{row.approvedCount} vendas</span>
-              <span className="text-gray-800 font-semibold text-xs w-20 text-right">
+            <div className="flex items-center gap-4">
+              <span className="text-text-tertiary">{row.approvedCount} vendas</span>
+              <span className="text-text-primary font-bold w-24 text-right">
                 {formatCurrency(row.netBrl)}
               </span>
               {row.takeRateFromFrontend !== null && (
-                <span className="text-indigo-600 font-bold text-xs w-16 text-right">
+                <span className="text-chart-1 font-bold w-16 text-right">
                   {row.takeRateFromFrontend.toFixed(1)}% TR
                 </span>
               )}
               {row.takeRateFromUpsell01 !== null && (
-                <span className="text-orange-500 font-bold text-xs w-20 text-right">
+                <span className="text-chart-4 font-bold w-20 text-right">
                   {row.takeRateFromUpsell01.toFixed(1)}% U1→U2
                 </span>
               )}
